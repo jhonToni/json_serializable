@@ -43,6 +43,8 @@ class JsonSerializableGenerator
       ].followedBy(_typeHelpers).followedBy(_coreHelpers);
 
   final bool useWrappers;
+  final bool checked;
+  final bool anyMap;
 
   /// Creates an instance of [JsonSerializableGenerator].
   ///
@@ -53,9 +55,16 @@ class JsonSerializableGenerator
   /// [Map] and [List] instances created during serialization. This will
   /// increase the code size, but it may improve runtime performance, especially
   /// for large object graphs.
+  ///
+  /// If [checked] - you're messing around...
   const JsonSerializableGenerator(
-      {List<TypeHelper> typeHelpers, bool useWrappers: false})
+      {List<TypeHelper> typeHelpers,
+      bool useWrappers: false,
+      bool checked: false,
+      bool anyMap: false})
       : this.useWrappers = useWrappers ?? false,
+        this.checked = checked ?? false,
+        this.anyMap = anyMap ?? false,
         this._typeHelpers = typeHelpers ?? _defaultHelpers;
 
   /// Creates an instance of [JsonSerializableGenerator].
@@ -64,9 +73,11 @@ class JsonSerializableGenerator
   /// the built-in helpers: [JsonHelper] and [DateTimeHelper].
   factory JsonSerializableGenerator.withDefaultHelpers(
           Iterable<TypeHelper> typeHelpers,
-          {bool useWrappers: false}) =>
+          {bool useWrappers: false,
+          bool anyMap: false}) =>
       new JsonSerializableGenerator(
           useWrappers: useWrappers,
+          anyMap: anyMap,
           typeHelpers: new List.unmodifiable(
               [typeHelpers, _defaultHelpers].expand((e) => e)));
 

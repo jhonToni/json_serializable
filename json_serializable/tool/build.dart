@@ -18,6 +18,10 @@ final List<BuilderApplication> builders = [
         'test/test_files/kitchen_sink.dart',
         'test/test_files/json_test_example.dart'
       ])),
+  applyToRoot(checked(null),
+      generateFor: const InputSet(include: const [
+        'test/test_files/kitchen_sink.non_nullable.dart',
+      ])),
   applyToRoot(wrapped(),
       generateFor: const InputSet(include: const [
         'test/test_files/kitchen_sink.dart',
@@ -32,15 +36,33 @@ final List<BuilderApplication> builders = [
           'test/test_files/json_literal.dart',
           'test/test_files/json_test_example.dart',
           'test/test_files/json_test_example.non_nullable.dart',
+        ],
+      )),
+  applyToRoot(jsonPartBuilder(header: copyrightHeader, anyMap: true),
+      generateFor: const InputSet(
+        include: const [
           'test/test_files/kitchen_sink.dart',
           'test/test_files/kitchen_sink.non_nullable.dart'
+        ],
+      )),
+  applyToRoot(
+      jsonPartBuilder(header: copyrightHeader, checked: true, anyMap: true),
+      generateFor: const InputSet(
+        include: const [
+          'test/test_files/kitchen_sink.non_nullable.checked.dart',
         ],
       )),
   applyToRoot(jsonPartBuilder(useWrappers: true, header: copyrightHeader),
       generateFor: const InputSet(
         include: const [
-          'test/test_files/kitchen_sink*wrapped.dart',
           'test/test_files/json_test_example*wrapped.dart',
+        ],
+      )),
+  applyToRoot(
+      jsonPartBuilder(useWrappers: true, anyMap: true, header: copyrightHeader),
+      generateFor: const InputSet(
+        include: const [
+          'test/test_files/kitchen_sink*wrapped.dart',
         ],
       )),
   applyToRoot(testBootstrapBuilder(null),

@@ -4,9 +4,13 @@
 
 import 'package:test/test.dart';
 
+import 'package:json_annotation/json_annotation.dart';
 import 'package:json_serializable/src/constants.dart';
+import 'package:yaml/yaml.dart';
 
 import 'test_files/kitchen_sink.dart' as nullable
+    show testFactory, testFromJson;
+import 'test_files/kitchen_sink.non_nullable.checked.dart' as checked
     show testFactory, testFromJson;
 import 'test_files/kitchen_sink.non_nullable.dart' as nn
     show testFactory, testFromJson;
@@ -20,6 +24,44 @@ import 'test_utils.dart';
 
 final _isACastError = const isInstanceOf<CastError>();
 final _isATypeError = const isInstanceOf<TypeError>();
+void _coolError(SerializationConvertException err) {
+  var yamlMap = err.map as YamlMap;
+
+  var yamlKey = yamlMap.nodes.keys.singleWhere(
+      (k) => (k as YamlScalar).value == err.key,
+      orElse: () => null) as YamlScalar;
+
+  var message = 'Could not create `${err.className}`.';
+  if (yamlKey == null) {
+    assert(err.key == null);
+    message = [yamlMap.span.message(message), err.innerError].join('\n');
+  } else {
+    message = '$message Unsupported value for `${err.key}`.';
+
+    if (err.targetType != dynamic &&
+        (err.innerError is CastError || err.innerError is TypeError)) {
+      message = '$message Could not convert to `${err.targetType}`.';
+    } else if (err.message != null) {
+      message = '$message ${err.message}';
+    }
+
+    message = yamlKey.span.message(message);
+  }
+
+  print(['', message, ''].join('\n'));
+
+  expect(err.className, isNotNull);
+}
+
+final _throwsASerializationConvertException = throwsA((e) {
+  if (e is SerializationConvertException) {
+    if (e.map is YamlMap) {
+      _coolError(e);
+    }
+    return true;
+  }
+  return false;
+});
 
 void main() {
   test('valid values covers all keys', () {
@@ -32,21 +74,24 @@ void main() {
 
   group('nullable', () {
     group('unwrapped', () {
-      _nullableTests(nullable.testFactory, nullable.testFromJson);
+      _nullableTests(nullable.testFactory, nullable.testFromJson, false);
     });
 
     group('wrapped', () {
-      _nullableTests(wrapped.testFactory, wrapped.testFromJson);
+      _nullableTests(wrapped.testFactory, wrapped.testFromJson, false);
     });
   });
 
   group('non-nullable', () {
+    group('checked', () {
+      _nonNullableTests(checked.testFactory, checked.testFromJson, true);
+    });
     group('unwrapped', () {
-      _nonNullableTests(nn.testFactory, nn.testFromJson);
+      _nonNullableTests(nn.testFactory, nn.testFromJson, false);
     });
 
     group('wrapped', () {
-      _nonNullableTests(nnwrapped.testFactory, nnwrapped.testFromJson);
+      _nonNullableTests(nnwrapped.testFactory, nnwrapped.testFromJson, false);
     });
   });
 }
@@ -60,20 +105,24 @@ typedef KitchenSink KitchenSinkCtor(
     Iterable<DateTime> dateTimeIterable});
 
 void _nonNullableTests(
-    KitchenSinkCtor ctor, KitchenSink fromJson(Map<String, dynamic> json)) {
+    KitchenSinkCtor ctor, KitchenSink fromJson(Map json), bool isChecked) {
   test('with null values fails serialization', () {
     expect(() => (ctor()..stringDateTimeMap = null).toJson(),
         throwsNoSuchMethodError);
   });
 
   test('with empty json fails deserialization', () {
-    expect(() => fromJson({}), throwsNoSuchMethodError);
+    if (isChecked) {
+      expect(() => fromJson({}), _throwsASerializationConvertException);
+    } else {
+      expect(() => fromJson({}), throwsNoSuchMethodError);
+    }
   });
-  _sharedTests(ctor, fromJson);
+  _sharedTests(ctor, fromJson, isChecked);
 }
 
 void _nullableTests(
-    KitchenSinkCtor ctor, KitchenSink fromJson(Map<String, dynamic> json)) {
+    KitchenSinkCtor ctor, KitchenSink fromJson(Map json), bool isChecked) {
   void roundTripItem(KitchenSink p) {
     roundTripObject(p, (json) => fromJson(json));
   }
@@ -124,11 +173,11 @@ void _nullableTests(
     roundTripItem(item);
   });
 
-  _sharedTests(ctor, fromJson);
+  _sharedTests(ctor, fromJson, isChecked);
 }
 
 void _sharedTests(
-    KitchenSinkCtor ctor, KitchenSink fromJson(Map<String, dynamic> json)) {
+    KitchenSinkCtor ctor, KitchenSink fromJson(Map json), bool isChecked) {
   void roundTripSink(KitchenSink p) {
     roundTripObject(p, fromJson);
   }
@@ -178,18 +227,56 @@ void _sharedTests(
     expect(json.keys, orderedEquals(_expectedOrder));
   });
 
-  test('valid values round-trip', () {
+  test('valid values round-trip - json', () {
     expect(loudEncode(_validValues), loudEncode(fromJson(_validValues)));
+  });
+
+  test('valid values round-trip - yaml', () {
+    var jsonEncoded = loudEncode(_validValues);
+    var yaml = loadYaml(jsonEncoded, sourceUrl: 'input.yaml');
+    expect(jsonEncoded, loudEncode(fromJson(yaml as YamlMap)));
   });
 
   group('a bad value for', () {
     for (var e in _invalidValues.entries) {
-      test('`${e.key}` fails', () {
-        var copy = new Map<String, dynamic>.from(_validValues);
-        copy[e.key] = e.value;
-        expect(() => fromJson(copy),
-            throwsA(anyOf(_isATypeError, _isACastError, isArgumentError)));
-      });
+      for (var isJson in [true, false]) {
+        test('`${e.key}` fails - ${isJson ? 'json' : 'yaml'}', () {
+          var copy = new Map.from(_validValues);
+          copy[e.key] = e.value;
+
+          if (!isJson) {
+            copy = loadYaml(loudEncode(copy)) as YamlMap;
+          }
+
+          final matcher = isChecked
+              ? predicate((err) {
+                  printOnFailure(
+                      'Type of `err` for `${e.key}`: ${err.runtimeType}');
+                  if (err is SerializationConvertException) {
+                    if (!isJson) {
+                      _coolError(err);
+                    }
+
+                    // TODO: so when the cast fails within the ctor body – with later
+                    // iterables, then we don't catch it. We could fix that by
+                    // wrapping the inner casts – but that's for later
+                    if (const ['intIterable', 'datetime-iterable']
+                        .contains(e.key)) {
+                      return err.key == null;
+                    }
+
+                    printOnFailure(['should equal', err.key, e.key].join(','));
+                    return err.key == e.key;
+                  } else {
+                    printOnFailure('wtf?');
+                    return false;
+                  }
+                })
+              : anyOf(_isACastError, _isATypeError, isArgumentError);
+
+          expect(() => fromJson(copy), throwsA(matcher));
+        });
+      }
     }
   });
 }

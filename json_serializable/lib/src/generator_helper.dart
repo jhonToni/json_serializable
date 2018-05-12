@@ -11,6 +11,7 @@ import 'package:source_gen/source_gen.dart';
 
 import 'constants.dart';
 import 'json_key_helpers.dart';
+import 'json_literal_generator.dart';
 import 'json_serializable_generator.dart';
 import 'type_helper.dart';
 import 'type_helper_context.dart';
@@ -123,25 +124,62 @@ class _GeneratorHelper {
     });
 
     if (_annotation.createFactory) {
+      var mapType = _generator.anyMap ? 'Map' : 'Map<String, dynamic>';
+
       _buffer.writeln();
-      _buffer.writeln('${_element.name} '
-          '${_prefix}FromJson(Map<String, dynamic> json) =>');
 
-      String deserializeFun(String paramOrFieldName,
-              {ParameterElement ctorParam}) =>
-          _deserializeForField(accessibleFields[paramOrFieldName],
-              ctorParam: ctorParam);
+      Set<String> fieldsSetByFactory;
+      if (_generator.checked) {
+        String deserializeFun(String paramOrFieldName,
+                {ParameterElement ctorParam}) =>
+            _deserializeForField(
+                accessibleFields[paramOrFieldName], ctorParam, true);
 
-      var fieldsSetByFactory = writeConstructorInvocation(
-          _buffer,
-          _element,
-          accessibleFields.keys,
-          accessibleFields.values
-              .where((fe) => !fe.isFinal)
-              .map((fe) => fe.name)
-              .toList(),
-          unavailableReasons,
-          deserializeFun);
+        var tempBuffer = new StringBuffer();
+        fieldsSetByFactory = writeConstructorInvocation(
+            tempBuffer,
+            _element,
+            accessibleFields.keys,
+            accessibleFields.values
+                .where((fe) => !fe.isFinal)
+                .map((fe) => fe.name)
+                .toList(),
+            unavailableReasons,
+            deserializeFun);
+
+        var keyFieldMap = new Map<String, String>.fromIterable(
+            fieldsSetByFactory,
+            value: (k) => _nameAccess(accessibleFields[k]));
+
+        var classNameSafe = escapeDartString(_element.displayName);
+
+        _buffer.writeln('''
+${_element.displayName} ${_prefix}FromJson($mapType map) =>
+  \$wrapNew($classNameSafe, map, ${jsonMapAsDart(keyFieldMap, true)}, (json) => ''');
+
+        _buffer.write(tempBuffer);
+
+        _buffer.write(')');
+      } else {
+        String deserializeFun(String paramOrFieldName,
+                {ParameterElement ctorParam}) =>
+            _deserializeForField(
+                accessibleFields[paramOrFieldName], ctorParam, false);
+
+        _buffer.writeln('${_element.name} '
+            '${_prefix}FromJson($mapType json) =>');
+
+        fieldsSetByFactory = writeConstructorInvocation(
+            _buffer,
+            _element,
+            accessibleFields.keys,
+            accessibleFields.values
+                .where((fe) => !fe.isFinal)
+                .map((fe) => fe.name)
+                .toList(),
+            unavailableReasons,
+            deserializeFun);
+      }
       _buffer.writeln(';');
 
       // If there are fields that are final – that are not set via the generated
@@ -288,14 +326,25 @@ void $toJsonMapHelperName(String key, dynamic value) {
     }
   }
 
-  String _deserializeForField(FieldElement field,
-      {ParameterElement ctorParam}) {
+  String _deserializeForField(
+      FieldElement field, ParameterElement ctorParam, bool checked) {
     var jsonKey = _safeNameAccess(field);
 
     var targetType = ctorParam?.type ?? field.type;
 
+    String rootAccess;
+    if (checked) {
+      rootAccess = 'm[g]';
+    } else {
+      rootAccess = 'json[$jsonKey]';
+    }
+
     try {
-      return _getHelperContext(field).deserialize(targetType, 'json[$jsonKey]');
+      var value = _getHelperContext(field).deserialize(targetType, rootAccess);
+      if (checked) {
+        return '\$wrapConvert(json, $jsonKey, (m, g) => $value)';
+      }
+      return value;
     } on UnsupportedTypeError catch (e) {
       throw _createInvalidGenerationError('fromJson', field, e);
     }

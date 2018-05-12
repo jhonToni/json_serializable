@@ -10,7 +10,7 @@ part of 'kitchen_sink.non_nullable.dart';
 // Generator: JsonSerializableGenerator
 // **************************************************************************
 
-KitchenSink _$KitchenSinkFromJson(Map<String, dynamic> json) => new KitchenSink(
+KitchenSink _$KitchenSinkFromJson(Map json) => new KitchenSink(
     ctorValidatedNo42: json['no-42'] as int,
     iterable: json['iterable'] as List,
     dynamicIterable: json['dynamicIterable'] as List,
@@ -26,20 +26,20 @@ KitchenSink _$KitchenSinkFromJson(Map<String, dynamic> json) => new KitchenSink(
   ..dateTimeList = (json['dateTimeList'] as List)
       .map((e) => DateTime.parse(e as String))
       .toList()
-  ..map = json['map'] as Map<String, dynamic>
+  ..map = new Map<String, dynamic>.from(json['map'] as Map)
   ..stringStringMap =
       new Map<String, String>.from(json['stringStringMap'] as Map)
   ..stringIntMap = new Map<String, int>.from(json['stringIntMap'] as Map)
   ..stringDateTimeMap = new Map<String, DateTime>.fromIterables(
-      (json['stringDateTimeMap'] as Map<String, dynamic>).keys,
+      (json['stringDateTimeMap'] as Map).keys.cast<String>(),
       (json['stringDateTimeMap'] as Map)
           .values
           .map((e) => DateTime.parse(e as String)))
   ..crazyComplex = (json['crazyComplex'] as List)
       .map((e) => new Map<String, Map<String, List<List<DateTime>>>>.fromIterables(
-          (e as Map<String, dynamic>).keys,
+          (e as Map).keys.cast<String>(),
           (e as Map).values.map((e) =>
-              new Map<String, List<List<DateTime>>>.fromIterables((e as Map<String, dynamic>).keys, (e as Map).values.map((e) => (e as List).map((e) => (e as List).map((e) => DateTime.parse(e as String)).toList()).toList())))))
+              new Map<String, List<List<DateTime>>>.fromIterables((e as Map).keys.cast<String>(), (e as Map).values.map((e) => (e as List).map((e) => (e as List).map((e) => DateTime.parse(e as String)).toList()).toList())))))
       .toList()
   ..val = new Map<String, bool>.from(json['val'] as Map)
   ..writeNotNull = json['writeNotNull'] as bool

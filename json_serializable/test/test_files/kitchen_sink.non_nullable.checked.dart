@@ -2,15 +2,27 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+// **************************************************************************
+// Generator: _CheckedGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+// **************************************************************************
+// Generator: _NonNullableGenerator
+// **************************************************************************
+
 // ignore_for_file: annotate_overrides, hash_and_equals
 import 'package:json_annotation/json_annotation.dart';
 
 import 'kitchen_sink_interface.dart' as k;
 
-part 'kitchen_sink.g.dart';
+part 'kitchen_sink.non_nullable.checked.g.dart';
 
-List<T> _defaultList<T>() => null;
-Map _defaultMap() => null;
+List<T> _defaultList<T>() => <T>[];
+Map<String, T> _defaultMap<T>() => <String, T>{};
 
 k.KitchenSink testFactory(
         {int ctorValidatedNo42,
@@ -29,7 +41,7 @@ k.KitchenSink testFactory(
 
 k.KitchenSink testFromJson(Map json) => new KitchenSink.fromJson(json);
 
-@JsonSerializable()
+@JsonSerializable(nullable: false)
 class KitchenSink extends Object
     with _$KitchenSinkSerializerMixin
     implements k.KitchenSink {
@@ -70,7 +82,7 @@ class KitchenSink extends Object
   factory KitchenSink.fromJson(Map json) => _$KitchenSinkFromJson(json);
 
   @JsonKey(includeIfNull: false)
-  DateTime dateTime;
+  DateTime dateTime = new DateTime(1981, 6, 5);
 
   @JsonKey(includeIfNull: false)
   Iterable get iterable => _iterable;

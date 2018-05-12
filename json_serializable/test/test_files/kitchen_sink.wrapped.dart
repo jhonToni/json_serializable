@@ -33,8 +33,7 @@ k.KitchenSink testFactory(
         intIterable: intIterable,
         dateTimeIterable: dateTimeIterable);
 
-k.KitchenSink testFromJson(Map<String, dynamic> json) =>
-    new KitchenSink.fromJson(json);
+k.KitchenSink testFromJson(Map json) => new KitchenSink.fromJson(json);
 
 @JsonSerializable()
 class KitchenSink extends Object
@@ -74,8 +73,7 @@ class KitchenSink extends Object
     }
   }
 
-  factory KitchenSink.fromJson(Map<String, Object> json) =>
-      _$KitchenSinkFromJson(json);
+  factory KitchenSink.fromJson(Map json) => _$KitchenSinkFromJson(json);
 
   @JsonKey(includeIfNull: false)
   DateTime dateTime;
