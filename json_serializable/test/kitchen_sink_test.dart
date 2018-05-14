@@ -56,7 +56,7 @@ void _coolError(SerializationConvertException err) {
 final _throwsASerializationConvertException = throwsA((e) {
   if (e is SerializationConvertException) {
     if (e.map is YamlMap) {
-      _coolError(e);
+      prettyPrintSerializationConvertException(e);
     }
     return true;
   }

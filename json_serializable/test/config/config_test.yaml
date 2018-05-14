@@ -1,0 +1,14 @@
+builders:
+  # The regular builder config, creates `.tar.gz` files.
+  regular_builder:
+    import: "package:my_package/builder.dart"
+    builder_factories: ["myBuilder"]
+    build_extensions: {".dart": [".tar.gz"]}
+    auto_apply: root_package
+    apply_builders: ["|archive_extract_builder"]
+post_process_builders:
+  # The post process builder config, extracts `.tar.gz` files.
+  extract_archive_builder:
+    import: "package:my_package/extract_archive_builder.dart"
+    builder_factory: "myExtractArchiveBuilder"
+    input_extensions: [".tar.gz"]

@@ -5,8 +5,10 @@
 import 'dart:convert';
 import 'dart:mirrors';
 
+import 'package:json_annotation/json_annotation.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
+import 'package:yaml/yaml.dart';
 
 String _packagePathCache;
 
@@ -61,3 +63,33 @@ String loudEncode(Object object) {
     rethrow;
   }
 }
+
+void prettyPrintSerializationConvertException(SerializationConvertException err) {
+  var yamlMap = err.map as YamlMap;
+
+  var yamlKey = yamlMap.nodes.keys.singleWhere(
+          (k) => (k as YamlScalar).value == err.key,
+      orElse: () => null) as YamlScalar;
+
+  var message = 'Could not create `${err.className}`.';
+  if (yamlKey == null) {
+    assert(err.key == null);
+    message = [yamlMap.span.message(message), err.innerError].join('\n');
+  } else {
+    message = '$message Unsupported value for `${err.key}`.';
+
+    if (err.targetType != dynamic &&
+        (err.innerError is CastError || err.innerError is TypeError)) {
+      message = '$message Could not convert to `${err.targetType}`.';
+    } else if (err.message != null) {
+      message = '$message ${err.message}';
+    }
+
+    message = yamlKey.span.message(message);
+  }
+
+  print(['', message, ''].join('\n'));
+
+  expect(err.className, isNotNull);
+}
+
